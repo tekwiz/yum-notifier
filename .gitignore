@@ -1,0 +1,4 @@
+yum-notifier.tar.gz
+/tmp/*
+
+!.gitkeep
