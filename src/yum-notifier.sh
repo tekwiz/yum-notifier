@@ -128,6 +128,7 @@ UPDATES=
 updateinfo_types=( )
 FROM_EMAIL=
 NOTIFY_EMAIL=
+SNS_TOPIC=
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 SUPPRESS_NOTICES=( )
@@ -217,29 +218,29 @@ updateinfo_list() {
     | sort --unique
 }
 
-email_text="Updates are available for $( hostname )"$'\n'"Timestamp: $( date )"
+msg_text="Updates are available for $( hostname )"$'\n'"Timestamp: $( date )"
 
 debug_email_text() {
-  debug $'%sEmail text:%s\n%s\n' "$( _ansicolor bold )" "$( _reset )" "$email_text"
+  debug $'%sEmail text:%s\n%s\n' "$( _ansicolor bold )" "$( _reset )" "$msg_text"
 }
 
 if [[ $INCLUDE_SUMMARY ]]; then
-  email_text_tmp="$( updateinfo_summary )"
-  [ $? -eq 0 ] && email_text="$email_text"$'\n\n'"$email_text_tmp"
+  msg_text_tmp="$( updateinfo_summary )"
+  [ $? -eq 0 ] && msg_text="$msg_text"$'\n\n'"$msg_text_tmp"
 fi
 
-email_text_tmp="$( updateinfo_list )"
+msg_text_tmp="$( updateinfo_list )"
 if [[ $? -eq 0 ]]; then
-  email_text="$email_text"$'\n\n'"$email_text_tmp"
+  msg_text="$msg_text"$'\n\n'"$msg_text_tmp"
 elif [[ $UPDATES = 'security' ]]; then
   debug_email_text
   info 'No updates'
   exit 0
 fi
 
-email_text_tmp="$( updates_list )"
+msg_text_tmp="$( updates_list )"
 if [[ $? -eq 0 ]]; then
-  email_text="$email_text"$'\n\n'"$email_text_tmp"
+  msg_text="$msg_text"$'\n\n'"$msg_text_tmp"
 else
   debug_email_text
   info 'No updates'
@@ -253,7 +254,27 @@ if [[ $SEND_EMAIL ]]; then
     --from "$FROM_EMAIL" \
     --to "$NOTIFY_EMAIL" \
     --subject "Security updates for $( hostname )" \
-    --text "$email_text"
+    --text "$msg_text"
 
-  info "Sent updates email to %s" "$NOTIFY_EMAIL"
+  if [[ $? -eq 0 ]]; then
+    info "Sent updates email to %s" "$NOTIFY_EMAIL"
+  else
+    warn "Failed send updates email to %s" "$NOTIFY_EMAIL"
+  fi
+fi
+
+if [[ "$SNS_TOPIC" ]]; then
+  msg_text_fn=$( mktemp /tmp/yum-notifier-msg.txt.XXXXXX )
+  aws --region us-east-1 --output text sns publish \
+    --topic-arn "$SNS_TOPIC" \
+    --subject "Security updates for $( hostname )" \
+    --message "file://$msg_text_fn"
+
+  if [[ $? -eq 0 ]]; then
+    info "Sent updates notification to %s" "$SNS_TOPIC"
+  else
+    warn "Failed send updates notification to %s" "$SNS_TOPIC"
+  fi
+
+  rm -f $msg_text_fn
 fi
