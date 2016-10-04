@@ -29,7 +29,7 @@ install_opts=( --owner=root --group=root )
 [ "$VERBOSE" ] && install_opts+=( --verbose )
 
 install "${install_opts[@]}" --mode=0755 \
-  "$srcdir/yum-notifier.sh" "$SRC_DIR/yum-notifier-cron.sh" /usr/local/sbin
+  "$srcdir/yum-notifier.sh" "$srcdir/yum-notifier-cron.sh" /usr/local/sbin
 [ $? -ne 0 ] && die "Failed to install sbin files"
 
 install "${install_opts[@]}" --mode=0600 --backup \
