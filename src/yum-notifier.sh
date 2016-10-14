@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# YUM Notifier <https://github.com/maxmedia/yum-notifier>
+#
 # Copyright 2016 MaxMedia <https://www.maxmedia.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -111,8 +113,15 @@ die() {
   exit 1
 }
 
-instance_has_iam_creds() {
-  curl -f instance-data/latest/meta-data/iam/security-credentials/ 2>/dev/null
+instance_has_aws_creds() {
+  local SECURITY_CREDENTIALS_URL=instance-data/latest/meta-data/iam/security-credentials/
+  [ "$( curl -f $SECURITY_CREDENTIALS_URL 2>/dev/null )" ] && return 0
+  return 1
+}
+
+env_has_aws_creds() {
+  [ "$AWS_ACCESS_KEY_ID" ] && [ "$AWS_SECRET_ACCESS_KEY" ] && return 0
+  return 1
 }
 
 load_and_validate_conf_file() {
@@ -126,10 +135,12 @@ load_and_validate_conf_file() {
     failure=
     [ -z "$FROM_EMAIL" ] && ( failure=1 && warn "FROM_EMAIL not defined" )
     [ -z "$NOTIFY_EMAIL" ] && ( failure=1 && warn "NOTIFY_EMAIL not defined" )
-    if [[ -z $( instance_has_iam_creds ) ]]; then
-      [ -z "$AWS_ACCESS_KEY_ID" ] && ( failure=1 && warn "AWS_ACCESS_KEY_ID not defined" )
-      [ -z "$AWS_SECRET_ACCESS_KEY" ] && ( failure=1 && warn "AWS_SECRET_ACCESS_KEY not defined" )
-    fi
+
+    local has_credentials=
+    instance_has_aws_creds && has_credentials=1
+    env_has_aws_creds && has_credentials=1
+    [ -z $has_credentials ] && ( failure=1 && warn "AWS credentials not defined" )
+
     [ $failure ] && die "One or more failures loading %s" "$CONF_FILE"
   fi
 }
@@ -176,7 +187,7 @@ done
 
 load_and_validate_conf_file
 
-if [[ -z "$AWS_ACCESS_KEY_ID" ]] && [[ -z "$AWS_SECRET_ACCESS_KEY" ]]; then
+if env_has_aws_creds; then
   export AWS_ACCESS_KEY_ID
   export AWS_SECRET_ACCESS_KEY
 fi
@@ -213,16 +224,18 @@ updateinfo_list() {
 
   [ -z "$data" ] && return 1
 
-  sed_suppress_args=( )
-  for n in "${SUPPRESS_NOTICES[@]}" ; do
-    if [[ $(tr -d "[:alnum:]-\n" <<< "$n" | wc -c) -ne 0 ]]; then
-      warn "Skipping invalid value in SUPPRESS_NOTICES: %s" "$n"
-      continue
-    fi
-    debug "Supressing %s" "$n" 1>&2
-    sed_suppress_args+=( -e "/^\\s*${n}\\b/ d" )
-  done
-  data=$( sed -r "${sed_suppress_args[@]}" <<< "$data" )
+  if [[ ${#SUPPRESS_NOTICES} -gt 0 ]]; then
+    sed_suppress_args=( )
+    for n in "${SUPPRESS_NOTICES[@]}" ; do
+      if [[ $(tr -d "[:alnum:]-\n" <<< "$n" | wc -c) -ne 0 ]]; then
+        warn "Skipping invalid value in SUPPRESS_NOTICES: %s" "$n"
+        continue
+      fi
+      debug "Supressing %s" "$n" 1>&2
+      sed_suppress_args+=( -e "/^\\s*${n}\\b/ d" )
+    done
+    data=$( sed -r "${sed_suppress_args[@]}" <<< "$data" )
+  fi
 
   [ -z "$data" ] && return 1
   echo "$data" \
@@ -252,19 +265,24 @@ elif [[ $UPDATES = 'security' ]]; then
   exit 0
 fi
 
-msg_text_tmp="$( updates_list )"
-if [[ $? -eq 0 ]]; then
-  msg_text="$msg_text"$'\n\n'"$msg_text_tmp"
-else
-  debug_email_text
-  info 'No updates'
-  exit 0
+if [[ $UPDATES = 'full' ]]; then
+  msg_text_tmp="$( updates_list )"
+  if [[ $? -eq 0 ]]; then
+    msg_text="$msg_text"$'\n\n'"$msg_text_tmp"
+  else
+    debug_email_text
+    info 'No updates'
+    exit 0
+  fi
 fi
 
 debug_email_text
 
+AWS_CMD_OPTS=( --region us-east-1 --output text )
+[ $VERBOSE ] && AWS_CMD_OPTS+=( --debug )
+
 if [[ $SEND_EMAIL ]]; then
-  aws --region us-east-1 --output text ses send-email \
+  aws "${AWS_CMD_OPTS[@]}" ses send-email \
     --from "$FROM_EMAIL" \
     --to "$NOTIFY_EMAIL" \
     --subject "Security updates for $( hostname )" \
@@ -278,17 +296,14 @@ if [[ $SEND_EMAIL ]]; then
 fi
 
 if [[ "$SNS_TOPIC" ]]; then
-  msg_text_fn=$( mktemp /tmp/yum-notifier-msg.txt.XXXXXX )
-  aws --region us-east-1 --output text sns publish \
+  aws "${AWS_CMD_OPTS[@]}" sns publish \
     --topic-arn "$SNS_TOPIC" \
     --subject "Security updates for $( hostname )" \
-    --message "file://$msg_text_fn"
+    --message "$msg_text"
 
   if [[ $? -eq 0 ]]; then
     info "Sent updates notification to %s" "$SNS_TOPIC"
   else
     warn "Failed send updates notification to %s" "$SNS_TOPIC"
   fi
-
-  rm -f $msg_text_fn
 fi

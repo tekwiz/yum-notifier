@@ -1,21 +1,29 @@
 # YUM Notifier
 
+https://github.com/maxmedia/yum-notifier
+
+## Prerequisites
+
+* [YUM](http://yum.baseurl.org/) (obviously)
+* [AWS CLI](https://aws.amazon.com/cli/)
+* An AWS account & credentials for [SES](https://aws.amazon.com/ses/) or an
+  [SNS](https://aws.amazon.com/sns/) topic for delivery of notifications
+
 ## Install:
 
 ```sh
-curl -L -o /usr/local/src/yum-notifier.tar.gz \
-  -G https://github.com/maxmedia/yum-notifier/archive/master.tar.gz
-tar -C /usr/local/src/ -xzvf /usr/local/src/yum-notifier.tar.gz
-mv /usr/local/src/yum-notifier-master /usr/local/src/yum-notifier
-/usr/local/src/yum-notifier/install.sh
-rm -Rf /usr/local/src/yum-notifier.tar.gz /usr/local/src/yum-notifier
+curl -L -o /usr/local/src/yum-notifier-0.2.tar.gz \
+  -G https://github.com/maxmedia/yum-notifier/archive/v0.2.tar.gz
+tar -C /usr/local/src/ -xzvf /usr/local/src/yum-notifier-0.2.tar.gz
+/usr/local/src/yum-notifier-0.2/install.sh
+rm -Rf /usr/local/src/yum-notifier-0.2.tar.gz /usr/local/src/yum-notifier-0.2
 ```
 
-## Package:
+## Configuration:
 
-```sh
-./package.sh
-```
+The configuration file `/etc/yum-notifier.conf` is a basic shell variable definition file.
+
+See [yum-notifier.conf](src/yum-notifier.conf) for inline documentation & examples.
 
 ## License
 
