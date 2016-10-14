@@ -111,8 +111,15 @@ die() {
   exit 1
 }
 
-instance_has_iam_creds() {
-  curl -f instance-data/latest/meta-data/iam/security-credentials/ 2>/dev/null
+instance_has_aws_creds() {
+  local SECURITY_CREDENTIALS_URL=instance-data/latest/meta-data/iam/security-credentials/
+  [ "$( curl -f $SECURITY_CREDENTIALS_URL 2>/dev/null )" ] && return 0
+  return 1
+}
+
+env_has_aws_creds() {
+  [ "$AWS_ACCESS_KEY_ID" ] && [ "$AWS_SECRET_ACCESS_KEY" ] && return 0
+  return 1
 }
 
 load_and_validate_conf_file() {
@@ -126,10 +133,12 @@ load_and_validate_conf_file() {
     failure=
     [ -z "$FROM_EMAIL" ] && ( failure=1 && warn "FROM_EMAIL not defined" )
     [ -z "$NOTIFY_EMAIL" ] && ( failure=1 && warn "NOTIFY_EMAIL not defined" )
-    if [[ -z $( instance_has_iam_creds ) ]]; then
-      [ -z "$AWS_ACCESS_KEY_ID" ] && ( failure=1 && warn "AWS_ACCESS_KEY_ID not defined" )
-      [ -z "$AWS_SECRET_ACCESS_KEY" ] && ( failure=1 && warn "AWS_SECRET_ACCESS_KEY not defined" )
-    fi
+
+    local has_credentials=
+    instance_has_aws_creds && has_credentials=1
+    env_has_aws_creds && has_credentials=1
+    [ -z $has_credentials ] && ( failure=1 && warn "AWS credentials not defined" )
+
     [ $failure ] && die "One or more failures loading %s" "$CONF_FILE"
   fi
 }
@@ -176,7 +185,7 @@ done
 
 load_and_validate_conf_file
 
-if [[ -z "$AWS_ACCESS_KEY_ID" ]] && [[ -z "$AWS_SECRET_ACCESS_KEY" ]]; then
+if env_has_aws_creds; then
   export AWS_ACCESS_KEY_ID
   export AWS_SECRET_ACCESS_KEY
 fi
