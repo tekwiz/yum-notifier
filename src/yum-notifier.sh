@@ -276,8 +276,11 @@ fi
 
 debug_email_text
 
+AWS_CMD_OPTS=( --region us-east-1 --output text )
+[ $VERBOSE ] && AWS_CMD_OPTS+=( --debug )
+
 if [[ $SEND_EMAIL ]]; then
-  aws --region us-east-1 --output text ses send-email \
+  aws "${AWS_CMD_OPTS[@]}" ses send-email \
     --from "$FROM_EMAIL" \
     --to "$NOTIFY_EMAIL" \
     --subject "Security updates for $( hostname )" \
@@ -291,7 +294,7 @@ if [[ $SEND_EMAIL ]]; then
 fi
 
 if [[ "$SNS_TOPIC" ]]; then
-  aws --region us-east-1 --output text sns publish \
+  aws "${AWS_CMD_OPTS[@]}" sns publish \
     --topic-arn "$SNS_TOPIC" \
     --subject "Security updates for $( hostname )" \
     --message "$msg_text"
