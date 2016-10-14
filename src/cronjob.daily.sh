@@ -1,5 +1,3 @@
 #!/bin/bash
-# Location: /etc/cron.daily/yum-notifier
-# Permissions: root:root, 0755
-
+# YUM Notifier <https://github.com/maxmedia/yum-notifier>
 exec /usr/local/sbin/yum-notifier-cron.sh security

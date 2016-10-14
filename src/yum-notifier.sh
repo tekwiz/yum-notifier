@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# YUM Notifier <https://github.com/maxmedia/yum-notifier>
+#
 # Copyright 2016 MaxMedia <https://www.maxmedia.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
