@@ -263,13 +263,15 @@ elif [[ $UPDATES = 'security' ]]; then
   exit 0
 fi
 
-msg_text_tmp="$( updates_list )"
-if [[ $? -eq 0 ]]; then
-  msg_text="$msg_text"$'\n\n'"$msg_text_tmp"
-else
-  debug_email_text
-  info 'No updates'
-  exit 0
+if [[ $UPDATES = 'full' ]]; then
+  msg_text_tmp="$( updates_list )"
+  if [[ $? -eq 0 ]]; then
+    msg_text="$msg_text"$'\n\n'"$msg_text_tmp"
+  else
+    debug_email_text
+    info 'No updates'
+    exit 0
+  fi
 fi
 
 debug_email_text
