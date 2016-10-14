@@ -291,17 +291,14 @@ if [[ $SEND_EMAIL ]]; then
 fi
 
 if [[ "$SNS_TOPIC" ]]; then
-  msg_text_fn=$( mktemp /tmp/yum-notifier-msg.txt.XXXXXX )
   aws --region us-east-1 --output text sns publish \
     --topic-arn "$SNS_TOPIC" \
     --subject "Security updates for $( hostname )" \
-    --message "file://$msg_text_fn"
+    --message "$msg_text"
 
   if [[ $? -eq 0 ]]; then
     info "Sent updates notification to %s" "$SNS_TOPIC"
   else
     warn "Failed send updates notification to %s" "$SNS_TOPIC"
   fi
-
-  rm -f $msg_text_fn
 fi
