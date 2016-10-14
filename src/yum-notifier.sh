@@ -222,16 +222,18 @@ updateinfo_list() {
 
   [ -z "$data" ] && return 1
 
-  sed_suppress_args=( )
-  for n in "${SUPPRESS_NOTICES[@]}" ; do
-    if [[ $(tr -d "[:alnum:]-\n" <<< "$n" | wc -c) -ne 0 ]]; then
-      warn "Skipping invalid value in SUPPRESS_NOTICES: %s" "$n"
-      continue
-    fi
-    debug "Supressing %s" "$n" 1>&2
-    sed_suppress_args+=( -e "/^\\s*${n}\\b/ d" )
-  done
-  data=$( sed -r "${sed_suppress_args[@]}" <<< "$data" )
+  if [[ ${#SUPPRESS_NOTICES} -gt 0 ]]; then
+    sed_suppress_args=( )
+    for n in "${SUPPRESS_NOTICES[@]}" ; do
+      if [[ $(tr -d "[:alnum:]-\n" <<< "$n" | wc -c) -ne 0 ]]; then
+        warn "Skipping invalid value in SUPPRESS_NOTICES: %s" "$n"
+        continue
+      fi
+      debug "Supressing %s" "$n" 1>&2
+      sed_suppress_args+=( -e "/^\\s*${n}\\b/ d" )
+    done
+    data=$( sed -r "${sed_suppress_args[@]}" <<< "$data" )
+  fi
 
   [ -z "$data" ] && return 1
   echo "$data" \
