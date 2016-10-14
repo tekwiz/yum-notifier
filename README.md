@@ -12,11 +12,11 @@ https://github.com/maxmedia/yum-notifier
 ## Install:
 
 ```sh
-curl -L -o /usr/local/src/yum-notifier-0.1.tar.gz \
-  -G https://github.com/maxmedia/yum-notifier/archive/v0.1.tar.gz
-tar -C /usr/local/src/ -xzvf /usr/local/src/yum-notifier-0.1.tar.gz
-/usr/local/src/yum-notifier-0.1/install.sh
-rm -Rf /usr/local/src/yum-notifier-0.1.tar.gz /usr/local/src/yum-notifier-0.1
+curl -L -o /usr/local/src/yum-notifier-0.2.tar.gz \
+  -G https://github.com/maxmedia/yum-notifier/archive/v0.2.tar.gz
+tar -C /usr/local/src/ -xzvf /usr/local/src/yum-notifier-0.2.tar.gz
+/usr/local/src/yum-notifier-0.2/install.sh
+rm -Rf /usr/local/src/yum-notifier-0.2.tar.gz /usr/local/src/yum-notifier-0.2
 ```
 
 ## Configuration:
